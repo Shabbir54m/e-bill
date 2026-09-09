@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বিদ্যুৎ বিল হিসাব ও বিল স্লিপ জেনারেটর</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2>বিদ্যুৎ বিল সিস্টেম লগইন</h2>
+            <form onsubmit="handleLogin(event)">
+                <div class="login-field">
+                    <label for="username">ইউজারনেম (Username)</label>
+                    <input type="text" id="username" placeholder="Username লিখুন" required autocomplete="username">
+                </div>
+                <div class="login-field">
+                    <label for="password">পাসওয়ার্ড (Password)</label>
+                    <input type="password" id="password" placeholder="Password লিখুন" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login">লগইন করুন</button>
+            </form>
+            <div id="login-error">ইউজারনেম অথবা পাসওয়ার্ড ভুল হয়েছে!</div>
+        </div>
+    </div>
+
+    <div id="main-app-content">
+        <div class="controls-wrapper">
+            <div class="controls-header-bar">
+                <button class="btn-header-action" onclick="promptEditClips()">✏️ এডিট স্লিপস</button>
+                <div class="controls-title">বিদ্যুৎ বিল হিসাব ও প্রিন্ট কন্ট্রোল</div>
+                <button class="btn-logout" onclick="handleLogout()" title="লগআউট করুন">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 17v-3H9v-4h7V7l5 5-5 5M14 2a2 2 0 0 1 2 2v2h-2V4H5v16h9v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9z"/>
+                    </svg>
+                    <span>লগআউট</span>
+                </button>
+            </div>
+            
+            <div class="global-inputs">
+                <div class="input-group-inline">
+                    <label for="global-date">তারিখ:</label>
+                    <input type="text" id="global-date" value="" placeholder="DD-MM-YYYY">
+                </div>
+                <div class="input-group-inline">
+                    <label for="global-month">বিলের মাস:</label>
+                    <select id="global-month">
+                        <option value="" selected disabled>মাস নির্বাচন করুন</option>
+                        <option value="জানুয়ারি">জানুয়ারি</option>
+                        <option value="ফেব্রুয়ারি">ফেব্রুয়ারি</option>
+                        <option value="মার্চ">মার্চ</option>
+                        <option value="এপ্রিল">এপ্রিল</option>
+                        <option value="মে">মে</option>
+                        <option value="জুন">জুন</option>
+                        <option value="জুলাই">জুলাই</option>
+                        <option value="আগস্ট">আগস্ট</option>
+                        <option value="সেপ্টেম্বর">সেপ্টেম্বর</option>
+                        <option value="অক্টোবর">অক্টোবর</option>
+                        <option value="নভেম্বর">নভেম্বর</option>
+                        <option value="ডিসেম্বর">ডিসেম্বর</option>
+                    </select>
+                    <select id="global-year">
+                        <option value="" disabled>সাল নির্বাচন করুন</option>
+                        <option value="২০২৬" selected>২০২৬</option>
+                        <option value="২০২৭">২০২৭</option>
+                        <option value="২০২৮">২০২৮</option>
+                        <option value="২০২৯">২০২৯</option>
+                        <option value="২০৩০">২০৩০</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="save-all-row">
+                <button class="btn-save-all" id="btn-save-all" onclick="saveAllSlips()">💾 সব বিল Google Sheet-এ সংরক্ষণ করুন</button>
+                <button class="btn-reset-all" id="btn-reset-all" onclick="clearAllInputs()">🔄 রিফ্রেশ / ক্লিয়ার</button>
+                <span id="save-all-status" class="save-all-status"></span>
+            </div>
+            <div>
+                <div id="connection-status" class="connection-status"></div>
+            </div>
+            <div class="print-btn-container">
+                <button class="btn-print" onclick="window.print()">
+                    <span>🖨️</span> Print A4 Page
+                </button>
+            </div>
+        </div>
+
+        <div class="slips-container" id="slips-container"></div>
+
+        <div class="bottom-print-container">
+            <button class="btn-print" onclick="window.print()">
+                <span>🖨️</span> Print A4 Page
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="confirm-overlay" id="confirm-overlay">
+        <div class="confirm-box">
+            <div class="confirm-box-title" id="confirm-box-title">নিশ্চিত করুন</div>
+            <div class="confirm-box-msg" id="confirm-box-msg">এই কাজটি সম্পন্ন করতে পাসওয়ার্ড দিন।</div>
+            
+            <input type="password" id="confirm-pass-input" class="confirm-pass-input" placeholder="পাসওয়ার্ড লিখুন..." autocomplete="off">
+            <div class="confirm-pass-error" id="confirm-pass-error">ভুল পাসওয়ার্ড! আবার চেষ্টা করুন।</div>
+
+            <div class="confirm-box-actions">
+                <button class="btn-mini btn-confirm-cancel" id="confirm-box-cancel">বাতিল করুন</button>
+                <button class="btn-mini btn-confirm-ok" id="confirm-box-ok" disabled>কনফার্ম করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Clips Modal -->
+    <div class="confirm-overlay" id="edit-slips-overlay">
+        <div class="confirm-box">
+            <div class="confirm-box-title">স্লিপ ম্যানেজমেন্ট (Edit Slips)</div>
+            <div style="font-size: 11px; color: #6b7280; margin-bottom: 5px;">💡 মাউস বা টাচ দিয়ে ড্র্যাগ করে উপরে-নিচে সাজান</div>
+            <div class="edit-slips-list" id="edit-slips-list"></div>
+            
+            <div class="add-new-slip-row">
+                <input type="text" id="new-slip-name" class="name-input" placeholder="নতুন স্লিপের নাম" style="flex:2; padding:6px; border:1px solid #d1d5db; border-radius:4px;">
+                <input type="number" id="new-slip-cost" class="cost-input" placeholder="রেট" style="flex:1; padding:6px; border:1px solid #d1d5db; border-radius:4px;">
+                <button class="btn-add-clip" onclick="addNewSlipConfig()" title="নতুন স্লিপ যোগ করুন">+</button>
+            </div>
+
+            <div class="confirm-box-actions" style="margin-top: 15px;">
+                <button class="btn-mini btn-confirm-cancel" onclick="closeEditClipsModal()">বন্ধ করুন</button>
+                <button class="btn-mini btn-confirm-ok" onclick="saveEditedClips()" style="background:#0d6efd;">সংরক্ষণ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
